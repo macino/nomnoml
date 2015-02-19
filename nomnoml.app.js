@@ -13,8 +13,49 @@ $(function (){
 	var linkLink = document.getElementById('linkbutton')
 	var canvasElement = document.getElementById('canvas')
 	var defaultSource = document.getElementById('defaultGraph').innerHTML
-	var graphics = skanaar.Canvas(canvasElement, {})
-	
+	var startPosition = false
+	var positionMoved = {
+		dx: 0
+	, dy: 0
+	}
+	var graphics = skanaar.Canvas(canvasElement, {
+		mousedown: function(position) {
+			startPosition = position
+		}
+	, mouseup: function() {
+			startPosition = false
+		}
+	, mousemove: function(position) {
+			if (!startPosition) {
+				return
+			}
+			var dx = position.x - startPosition.x
+			var dy = position.y - startPosition.y
+			var canvasPosition = jqCanvas.position()
+			positionMoved = {
+				dx: positionMoved.dx + dx
+			, dy: positionMoved.dy + dy
+			}
+			if (dx == 0 && dy == 0) {
+				return
+			}
+			startPosition = position
+			jqCanvas.css('top', canvasPosition.top + dy);
+			jqCanvas.css('left', canvasPosition.left + dx);
+		}
+	})
+	canvasElement.addEventListener('mouseout', function() {
+		startPosition = false
+	})
+	canvasElement.addEventListener('dblclick', function() {
+		startPosition = false
+		positionMoved = {
+			dx: 0
+		, dy: 0
+		}
+		sourceChanged()
+	})
+
 	window.addEventListener('resize', _.throttle(sourceChanged, 750, {leading: true}))
 	textarea.addEventListener('input', _.debounce(sourceChanged, 300))
 	textarea.value = storage.read()
@@ -100,11 +141,12 @@ $(function (){
 		var h = rect.height * scale
 		jqCanvas.attr({width: superSampling*w, height: superSampling*h})
 		jqCanvas.css({
-			top: 300 * (1 - h/viewport.height()),
-			left: 150 + (viewport.width() - w)/2,
+			top: 300 * (1 - h/viewport.height()) + positionMoved.dy,
+			left: 150 + (viewport.width() - w)/2 + positionMoved.dx,
 			width: w,
 			height: h
 		})
+		console.log(positionMoved)
 	}
 
 	function setFont(config, isBold, isItalic){
